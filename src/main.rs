@@ -25,7 +25,7 @@ async fn teamup(
     ctx: Context<'_>,
     #[description = "Comma-separated list of voice channels for teams"]
     channels: String
-
+    
 ) -> Result<(), Error> {
     // get guild attributes
     let guild_id = ctx.guild_id().ok_or("Command must be used in the server")?;
@@ -67,7 +67,7 @@ async fn teamup(
         voice_channels_teams.push(voice_channel_team.id);
     }
 
-    // // get number of members
+    // get number of members
     let number_of_members = channel_members.len();
     if number_of_members <= 1 {
         return Err("Need at least two members in the voice channel to perfom teamup.".into());
@@ -97,11 +97,23 @@ async fn teamup(
         }
     }
 
-    ctx.say(format!(
-        "Splitted {} users into {} teams.",
-        number_of_members,
-        number_of_teams
-    )).await?;
+    // send embed message with results
+    let mut embed = CreateEmbed::new()
+        .title(format!("Splitted {} users into {} teams", number_of_members, number_of_teams))
+        .color(0x00D700); // Gold color
+
+    for (i, team) in teams.iter().enumerate() {
+        let team_name = format!("Team {}", i + 1);
+        let members_list = team
+            .iter()
+            .map(|m| m.display_name().to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        embed = embed.field(team_name, members_list, true);
+    }
+
+    ctx.send(poise::CreateReply::default().embed(embed)).await?;
 
     Ok(())
 }
