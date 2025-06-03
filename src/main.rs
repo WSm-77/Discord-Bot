@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use poise::serenity_prelude::{ClientBuilder, GatewayIntents};
-use serenity::all::{ChannelId, CreateEmbed, GuildId, Member};
+use serenity::all::{ChannelId, CreateEmbed, GuildId, Member, Mention};
 use shuttle_runtime::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 use rand::{self, seq::IndexedRandom};
@@ -8,6 +8,8 @@ use rand::{self, seq::IndexedRandom};
 struct Data {}
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
+
+const CONGRATULATIONS_GIF_URL: &str = "https://media.discordapp.net/attachments/1379075185935913001/1379093353865678958/congrats-leonardo-dicaprio.gif?ex=683fa505&is=683e5385&hm=9985763ded4578f7318e8b0dc6fe72c3b39085b385c4ebd5f8626e884cb176e4&=&width=688&height=290";
 
 /// Greet command caller
 #[poise::command(slash_command)]
@@ -43,7 +45,9 @@ async fn list_channel_members(
 /// Pick winner from your voice channel
 #[poise::command(prefix_command, slash_command)]
 async fn winner(
-    ctx: Context<'_>
+    ctx: Context<'_>,
+    #[description = "Event name"] event: Option<String>,
+    #[description = "Prize for winner"] prize: Option<String>,
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().ok_or("Command must be used in the server")?;
     let author = ctx.author();
@@ -61,19 +65,23 @@ async fn winner(
             .context("Couldn't choose winner")?
     };
 
-    let winner_name = winner.display_name();
-    let prize = "🎁 $20 Amazon Gift Card";
-    let event_name = "Spring Giveaway 2025";
+    let winner_mention_str = Mention::User(winner.user.id).to_string();
 
-    let embed = CreateEmbed::new()
+    let mut embed = CreateEmbed::new()
         .title("🎉 Congratulations to our Winner! 🎉")
-        .description(format!("Everyone, please give a big round of applause to **{}** for winning the **{}**!", winner_name, event_name))
-        .color(0xFFD700) // Gold color
-        .image("https://media.giphy.com/media/111ebonMs90YLu/giphy.gif") // Confetti GIF
-        .field("Prize", prize, false)
-        .field("Event", event_name, false);
-        // .footer(|f| f.text("Thanks to everyone who participated! Stay tuned for more contests."))
-        // .timestamp(chrono::Utc::now());
+        .description(format!("Everyone, please give a big round of applause to {} for winning our contest!", winner_mention_str))
+        .color(0xFFD700)
+        .image(CONGRATULATIONS_GIF_URL);
+
+    if let Some(prize) = prize {
+        embed = embed.field("Prize", prize, false);
+    }
+
+    if let Some(event) = event {
+        embed = embed.field("Event", event, false);
+    }
+
+    embed = embed.timestamp(chrono::Utc::now());
 
     ctx.send(poise::CreateReply::default().embed(embed)).await?;
 
