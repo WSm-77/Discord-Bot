@@ -9,12 +9,15 @@ use shuttle_serenity::ShuttleSerenity;
 use crate::commands::{
     greeting::greeting,
     winner::winner,
-    list_channel_members::list_channel_members
+    list_channel_members::list_channel_members,
+    teamup::teamup
 };
+
 
 pub struct Data {}
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
+
 
 #[shuttle_runtime::main]
 async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleSerenity {
@@ -35,7 +38,8 @@ async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleS
             commands: vec![
                     list_channel_members(),
                     greeting(),
-                    winner()
+                    winner(),
+                    teamup()
                 ],
             ..Default::default()
         })
@@ -50,7 +54,9 @@ async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleS
     let intents = GatewayIntents::non_privileged()
         | GatewayIntents::GUILD_VOICE_STATES
         | GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::MESSAGE_CONTENT;
+        | GatewayIntents::MESSAGE_CONTENT
+        | GatewayIntents::GUILD_VOICE_STATES
+        | GatewayIntents::GUILD_MEMBERS;
 
     let client = ClientBuilder::new(discord_token, intents)
         .framework(framework)
