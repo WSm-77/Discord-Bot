@@ -36,30 +36,20 @@ pub async fn get_voice_channels(
     Ok(channels)
 }
 
-pub async fn select_voice_channels_menu(
+pub async fn select_voice_channels(
     guild_id: GuildId,
     ctx: &Context<'_>
-) -> Result<(), Error> {
+) -> Result<Vec<ChannelId>, Error> {
 
-    let options: Vec<CreateSelectMenuOption>;
-
-    {
-        let guild = ctx.cache()
-            .ok_or("Coulnd't retrive context cache")?
-            .guild(guild_id)
-            .ok_or("Guild not found")?;
-
-        options = guild.channels.values()
-            .filter(|channel| channel.kind == ChannelType::Voice)
-            .map(|channel| CreateSelectMenuOption::new(channel.name.clone(), channel.id.to_string()))
-            .collect();
-    }
+    let options: Vec<CreateSelectMenuOption> = get_voice_channels(guild_id, *ctx).await?
+        .iter()
+        .map(|channel| CreateSelectMenuOption::new(channel.name.clone(), channel.id.to_string()))
+        .collect();
 
     let options_len = options.len() as u8;
 
     if options_len < 2 {
-        ctx.say("Not enough voice channels to select from.").await?;
-        return Ok(());
+        return Err("Not enough voice channels to select from.".into());
     }
 
     let select_menu_custom_id = "Select voice channels".to_string();
@@ -73,16 +63,11 @@ pub async fn select_voice_channels_menu(
         .components(vec![CreateActionRow::SelectMenu(menu)])
     ).await?;
 
-    let interaction: Option<ComponentInteraction> = {
-        let author_id = ctx.author().id;
-        let select_menu_custom_id = select_menu_custom_id.clone();
-
-        ComponentInteractionCollector::new(ctx.serenity_context().shard.clone())
+    let interaction: Option<ComponentInteraction> = ComponentInteractionCollector::new(ctx.serenity_context().shard.clone())
             .custom_ids(vec![select_menu_custom_id])
-            .author_id(author_id)
+            .author_id(ctx.author().id)
             .timeout(std::time::Duration::from_secs(60))
-            .await
-    };
+            .await;
 
     select_menu_message.edit(*ctx, CreateReply::default()
         .content("Successfully collected selections")
@@ -98,38 +83,13 @@ pub async fn select_voice_channels_menu(
                     .collect()
             }
             _ => {
-                select_menu_message.edit(*ctx,CreateReply::default()
-                    .content("Unexpected component interaction type.")
-                ).await?;
-
-                return Ok(());
+                return Err("Unexpected component interaction type.".into());
             }
         };
 
-        let channel_names: Vec<String> = {
-            let guild = ctx
-                .cache()
-                .ok_or("Cache unavailable")?
-                .guild(guild_id)
-                .ok_or("Guild not in cache")?;
-
-            selected_channel_ids
-                .iter()
-                .filter_map(|cid| guild.channels.get(cid))
-                .map(|ch| ch.name.clone())
-                .collect()
-        };
-
-        select_menu_message.edit(*ctx, CreateReply::default()
-            .content(format!(
-                "You selected: {}",
-                channel_names.join(", ")
-            ))
-        ).await?;
+        return Ok(selected_channel_ids);
     }
     else {
-        ctx.say("Timeout reached without selection!!!").await?;
+        return Err("Timeout reached without selection!!!".into());
     }
-
-    Ok(())
 }
