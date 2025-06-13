@@ -1,9 +1,9 @@
-use poise::serenity_prelude::*;
+use poise::{serenity_prelude::*, CreateReply};
 
 use crate::{Context, Error};
 
 pub async fn get_channel_members(
-    guild_id: poise::serenity_prelude::GuildId,
+    guild_id: GuildId,
     voice_channel_id: ChannelId,
     ctx: Context<'_>
 ) -> Result<Vec<Member>, Error> {
@@ -20,16 +20,16 @@ pub async fn get_channel_members(
 }
 
 pub async fn get_voice_channels(
-    guild_id: poise::serenity_prelude::GuildId,
+    guild_id: GuildId,
     ctx: Context<'_>
-) -> Result<Vec<poise::serenity_prelude::GuildChannel>, Error> {
+) -> Result<Vec<GuildChannel>, Error> {
     let guild = ctx.cache()
         .guild(guild_id)
         .ok_or("Guild not found")?;
 
     let channels = guild.channels
         .values()
-        .filter(|channel| channel.kind == serenity::model::channel::ChannelType::Voice)
+        .filter(|channel| channel.kind == ChannelType::Voice)
         .cloned()
         .collect();
 
@@ -37,7 +37,7 @@ pub async fn get_voice_channels(
 }
 
 pub async fn select_voice_channels_menu(
-    guild_id: poise::serenity_prelude::GuildId,
+    guild_id: GuildId,
     ctx: &Context<'_>
 ) -> Result<(), Error> {
 
@@ -50,8 +50,8 @@ pub async fn select_voice_channels_menu(
             .ok_or("Guild not found")?;
 
         options = guild.channels.values()
-            .filter(|channel| channel.kind == poise::serenity_prelude::ChannelType::Voice)
-            .map(|channel| poise::serenity_prelude::CreateSelectMenuOption::new(channel.name.clone(), channel.id.to_string()))
+            .filter(|channel| channel.kind == ChannelType::Voice)
+            .map(|channel| CreateSelectMenuOption::new(channel.name.clone(), channel.id.to_string()))
             .collect();
     }
 
@@ -69,10 +69,9 @@ pub async fn select_voice_channels_menu(
         .min_values(2)
         .max_values(options_len);
 
-    ctx.send(poise::CreateReply::default()
+    let select_menu_message = ctx.send(poise::CreateReply::default()
         .components(vec![CreateActionRow::SelectMenu(menu)])
     ).await?;
-
 
     let interaction: Option<ComponentInteraction> = {
         let author_id = ctx.author().id;
@@ -85,24 +84,27 @@ pub async fn select_voice_channels_menu(
             .await
     };
 
-    if let Some(interaction) = interaction {
-        interaction.create_response(ctx.serenity_context(),
-        CreateInteractionResponse::UpdateMessage(CreateInteractionResponseMessage::default()))
-        .await?;
+    select_menu_message.edit(*ctx, CreateReply::default()
+        .content("Successfully collected selections")
+        .components(vec![])     // clear selection menu
+    ).await?;
 
-        let selected_channel_ids: Vec<poise::serenity_prelude::ChannelId> = match &interaction.data.kind {
-            poise::serenity_prelude::ComponentInteractionDataKind::StringSelect{values} => {
+    if let Some(interaction) = interaction {
+        let selected_channel_ids: Vec<ChannelId> = match &interaction.data.kind {
+            ComponentInteractionDataKind::StringSelect{values} => {
                 values.iter()
                     .filter_map(|id_str| id_str.parse::<u64>().ok())
                     .map(ChannelId::new)
                     .collect()
             }
             _ => {
-                ctx.say("Unexpected component interaction type.").await?;
+                select_menu_message.edit(*ctx,CreateReply::default()
+                    .content("Unexpected component interaction type.")
+                ).await?;
+
                 return Ok(());
             }
         };
-
 
         let channel_names: Vec<String> = {
             let guild = ctx
@@ -118,10 +120,12 @@ pub async fn select_voice_channels_menu(
                 .collect()
         };
 
-        ctx.say(format!(
-            "You selected: {}",
-            channel_names.join(", ")
-        )).await?;
+        select_menu_message.edit(*ctx, CreateReply::default()
+            .content(format!(
+                "You selected: {}",
+                channel_names.join(", ")
+            ))
+        ).await?;
     }
     else {
         ctx.say("Timeout reached without selection!!!").await?;

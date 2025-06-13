@@ -1,7 +1,7 @@
 use super::utils::utils::select_voice_channels_menu;
 use crate::{Context, Error};
 
-/// Greet command caller
+/// Command for test purpose
 #[poise::command(slash_command)]
 pub async fn test(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id()
