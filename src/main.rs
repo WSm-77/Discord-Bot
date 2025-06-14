@@ -10,7 +10,8 @@ use crate::commands::{
     greeting::greeting,
     winner::winner,
     list_channel_members::list_channel_members,
-    teamup::teamup
+    teamup::teamup,
+    test::test
 };
 
 
@@ -39,7 +40,8 @@ async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleS
                     list_channel_members(),
                     greeting(),
                     winner(),
-                    teamup()
+                    teamup(),
+                    test(),
                 ],
             ..Default::default()
         })

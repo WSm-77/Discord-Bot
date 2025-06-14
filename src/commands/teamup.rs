@@ -1,15 +1,40 @@
-use serenity::all::{CreateEmbed, Member};
+use poise::serenity_prelude::*;
 use rand::{self, seq::SliceRandom};
 
 use crate::{Context, Error};
 use super::utils::utils::*;
 
+async fn parse_channels(channels: String, voice_channels: Vec<GuildChannel>) -> Result<Vec<ChannelId>, Error> {
+    // get voice channels by String
+    let vc_names: Vec<_> = channels
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let number_of_teams = vc_names.len();
+    if number_of_teams <= 1 {
+        return Err("Need at least two teams to perfom teamup.".into());
+    }
+
+    let mut voice_channels_teams = vec![];
+    for name in vc_names {
+        let voice_channel_team = voice_channels
+            .iter()
+            .find(|channel| channel.name == *name)
+            .ok_or_else(|| format!("Voice channel '{}' not found", name))?;
+
+        voice_channels_teams.push(voice_channel_team.id);
+    }
+
+    Ok(voice_channels_teams)
+}
+
 #[poise::command(slash_command)]
 pub async fn teamup(
     ctx: Context<'_>,
     #[description = "Comma-separated list of voice channels for teams"]
-    channels: String
-
+    channels: Option<String>
 ) -> Result<(), Error> {
     // get guild attributes
     let guild_id = ctx.guild_id().ok_or("Command must be used in the server")?;
@@ -28,28 +53,16 @@ pub async fn teamup(
     // get all voice channels
     let voice_channels = get_voice_channels(guild_id, ctx).await?;
 
-    // get voice channels by String
-    let vc_names: Vec<_> = channels
-        .split(',')
-        .map(|s| s.trim())
-        .filter(|s| !s.is_empty())
-        .collect();
+    let voice_channels_teams = match channels {
+        Some(channels) => {
+            parse_channels(channels, voice_channels).await?
+        },
+        None => {
+            select_voice_channels(guild_id, &ctx).await?
+        }
+    };
 
-    // get number of teams for users to be splitted to
-    let number_of_teams = vc_names.len();
-    if number_of_teams <= 1 {
-        return Err("Need at least two teams to perfom teamup.".into());
-    }
-
-    let mut voice_channels_teams = vec![];
-    for name in vc_names {
-        let voice_channel_team = voice_channels
-            .iter()
-            .find(|channel| channel.name == *name)
-            .ok_or_else(|| format!("Voice channel '{}' not found", name))?;
-
-        voice_channels_teams.push(voice_channel_team.id);
-    }
+    let number_of_teams = voice_channels_teams.len();
 
     // get number of members
     let number_of_members = channel_members.len();
