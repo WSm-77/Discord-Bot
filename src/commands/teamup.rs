@@ -4,6 +4,8 @@ use rand::{self, seq::SliceRandom};
 use crate::{Context, Error};
 use super::utils::utils::*;
 
+use std::time::Duration;
+
 async fn parse_channels(channels: String, voice_channels: Vec<GuildChannel>) -> Result<Vec<ChannelId>, Error> {
     // get voice channels by String
     let vc_names: Vec<_> = channels
@@ -73,44 +75,113 @@ pub async fn teamup(
         return Err("Number of members in a channel must be at least the amount of teams to perfom teamup".into());
     }
 
-    // shuffle randomly channel members
-    {
-        let mut rng = rand::rng();
-        channel_members.shuffle(&mut rng);
-    };
-
-    // perform teamup
-    let mut teams: Vec<Vec<Member>> = vec![vec![]; number_of_teams];
-    for (i, member) in channel_members.into_iter().enumerate() {
-        let team_index = i % number_of_teams;
-        teams[team_index].push(member);
-    }
-
-    // distribute team members to voice channels
-    for (i, team) in teams.iter().enumerate() {
-        let team_voice_channel = voice_channels_teams[i];
-        for member in team {
-            member.move_to_voice_channel(ctx.serenity_context(), team_voice_channel).await?;
+    let original_members = channel_members.clone();
+    let mut msg: Option<poise::ReplyHandle> = None;
+    
+    loop {
+        // Reset channel_members from original for each iteration
+        let mut current_members = original_members.clone();
+        
+        // shuffle randomly channel members
+        {
+            let mut rng = rand::rng();
+            current_members.shuffle(&mut rng);
         }
-    }
+        
+        // perform teamup
+        let mut teams: Vec<Vec<Member>> = vec![vec![]; number_of_teams];
+        for (i, member) in current_members.into_iter().enumerate() {
+            let team_index = i % number_of_teams;
+            teams[team_index].push(member.clone());
+        }
 
-    // send embed message with results
-    let mut embed = CreateEmbed::new()
-        .title(format!("Splitted {} users into {} teams", number_of_members, number_of_teams))
-        .color(0x00D700); // Gold color
+        // create an embed for reponses
+        let mut embed = CreateEmbed::new()
+            .title(format!("Splitted {} users into {} teams", number_of_members, number_of_teams))
+            .color(0x00D700); // Gold color
+        
+        // send embed message with results
+        for (i, team) in teams.iter().enumerate() {
+            let team_name = format!("Team {}", i + 1);
+            let members_list = team
+                .iter()
+                .map(|m| m.display_name().to_string())
+                .collect::<Vec<_>>()
+                .join("\n");
+    
+            embed = embed.field(team_name, members_list, true);
+        }
 
-    for (i, team) in teams.iter().enumerate() {
-        let team_name = format!("Team {}", i + 1);
-        let members_list = team
-            .iter()
-            .map(|m| m.display_name().to_string())
-            .collect::<Vec<_>>()
-            .join("\n");
+        if let Some(existing_msg) = &msg {
+            existing_msg
+                .edit(ctx, poise::CreateReply::default().embed(embed.clone()))
+                .await?;
+        } 
+        else {
+            msg = Some(ctx.send(
+                poise::CreateReply::default()
+                    .embed(embed.clone())
+                    .components(vec![CreateActionRow::Buttons(vec![
+                        CreateButton::new("accept").label("✅ Accept").style(ButtonStyle::Success),
+                        CreateButton::new("reshuffle").label("🔁 Reshuffle").style(ButtonStyle::Primary),
+                    ])])
+                ).await?
+            );
+        }
 
-        embed = embed.field(team_name, members_list, true);
-    }
+        let message_id = msg.as_ref().unwrap().message().await?.id;
 
-    ctx.send(poise::CreateReply::default().embed(embed)).await?;
+        if let Some(mci) = ComponentInteractionCollector::new(ctx.serenity_context())
+            .author_id(ctx.author().id)
+            .message_id(message_id)
+            .timeout(Duration::from_secs(60))
+            .await
+        {
+            match mci.data.custom_id.as_str() {
+                "accept" => {
+                    mci.create_response(ctx.serenity_context(), CreateInteractionResponse::UpdateMessage(
+                            CreateInteractionResponseMessage::new()
+                                .embed(embed.clone())
+                                .components(vec![])
+                        )
+                    ).await?;
+                    
+                    // distribute team members to voice channels
+                    for (i, team) in teams.iter().enumerate() {
+                        let team_voice_channel = voice_channels_teams[i];
+                        for member in team {
+                            member.move_to_voice_channel(ctx.serenity_context(), team_voice_channel).await?;
+                        }
+                    }
+
+                    ctx.send(poise::CreateReply::default()
+                        .content("✅ Teams confirmed and members moved.")
+                        .ephemeral(true)
+                    ).await?;
+
+                    return Ok(());
+                },
+                "reshuffle" => {
+                    mci.create_response(
+                        ctx.serenity_context(),
+                        CreateInteractionResponse::UpdateMessage(
+                            CreateInteractionResponseMessage::default(),
+                        ),
+                    ).await?;
+                    
+                    continue;
+                },
+                _ => {}
+            }
+        }
+        else {
+            ctx.send(poise::CreateReply::default()
+                .content("⏳ No response. Cancelled teamup.")
+                .ephemeral(true)
+            ).await?;
+            break;
+        }
+    };
 
     Ok(())
 }
