@@ -76,7 +76,8 @@ pub async fn teamup(
     }
 
     let original_members = channel_members.clone();
-
+    let mut msg: Option<poise::ReplyHandle> = None;
+    
     loop {
         // Reset channel_members from original for each iteration
         let mut current_members = original_members.clone();
@@ -93,12 +94,12 @@ pub async fn teamup(
             let team_index = i % number_of_teams;
             teams[team_index].push(member.clone());
         }
-        
+
         // create an embed for reponses
         let mut embed = CreateEmbed::new()
             .title(format!("Splitted {} users into {} teams", number_of_members, number_of_teams))
             .color(0x00D700); // Gold color
-
+        
         // send embed message with results
         for (i, team) in teams.iter().enumerate() {
             let team_name = format!("Team {}", i + 1);
@@ -111,16 +112,24 @@ pub async fn teamup(
             embed = embed.field(team_name, members_list, true);
         }
 
-        let msg = ctx.send(
-            poise::CreateReply::default()
-                .embed(embed.clone())
-                .components(vec![CreateActionRow::Buttons(vec![
-                    CreateButton::new("accept").label("✅ Accept").style(ButtonStyle::Success),
-                    CreateButton::new("reshuffle").label("🔁 Reshuffle").style(ButtonStyle::Primary),
-                ])])
-        ).await?;
+        if let Some(existing_msg) = &msg {
+            existing_msg
+                .edit(ctx, poise::CreateReply::default().embed(embed.clone()))
+                .await?;
+        } 
+        else {
+            msg = Some(ctx.send(
+                poise::CreateReply::default()
+                    .embed(embed.clone())
+                    .components(vec![CreateActionRow::Buttons(vec![
+                        CreateButton::new("accept").label("✅ Accept").style(ButtonStyle::Success),
+                        CreateButton::new("reshuffle").label("🔁 Reshuffle").style(ButtonStyle::Primary),
+                    ])])
+                ).await?
+            );
+        }
 
-        let message_id = msg.message().await?.id;
+        let message_id = msg.as_ref().unwrap().message().await?.id;
 
         if let Some(mci) = ComponentInteractionCollector::new(ctx.serenity_context())
             .author_id(ctx.author().id)
@@ -154,12 +163,12 @@ pub async fn teamup(
                 },
                 "reshuffle" => {
                     mci.create_response(
-                        ctx.serenity_context(),CreateInteractionResponse::Defer(
-                            CreateInteractionResponseMessage::new()
-                                .embed(embed.clone())
-                                .components(vec![])
-                            )
+                        ctx.serenity_context(),
+                        CreateInteractionResponse::UpdateMessage(
+                            CreateInteractionResponseMessage::default(),
+                        ),
                     ).await?;
+                    
                     continue;
                 },
                 _ => {}
