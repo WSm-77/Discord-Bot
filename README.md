@@ -1,18 +1,18 @@
-# DrawMaster
+<h1>
+  <img src="./description_resources/logo.jpg" alt="DrawMaster Logo" style="height: 20px; vertical-align: middle;">
+  DrawMaster
+  <img src="./description_resources/logo.jpg" alt="DrawMaster Logo" style="height: 20px; vertical-align: middle;">
+</h1>
 
 A Discord bot that splits users in a voice channel into teams or randomly picks a winner — ideal for quick team matchups and fun contests.
 
----
-
-## Features
+## 🚀 Features
 
 - **/teamup** command: Teams up users in a voice channel randomly.
 - **/winner** command: Selects a random winner among users in the same voice channel.
 - Student-built project for casual and competitive Discord gaming communities.
 
----
-
-## Usage
+## 🕹️ Usage
 
 Add the bot to your Discord server, then use the following slash commands:
 
@@ -21,73 +21,69 @@ Add the bot to your Discord server, then use the following slash commands:
 /winner
 ```
 
----
-
-## Demo Videos
+## 🎬 Demo Videos
 
 ### `/teamup` Demo
 
-![split into 2 teams](description_resources/split_2teams_reshuffle.mp4)
-![split into 3 teams](description_resources/split_3teams_reshuffle.mp4)
-![teamup with channel option](description_resources/teamup_with_channels_option.mp4)
+1. Split into 2 teams
+
+https://github.com/user-attachments/assets/17447bcb-d52b-442e-aadb-5d0e13b0239b
+
+2. Split into 3 teams
+
+https://github.com/user-attachments/assets/61ad63b9-7e7b-451d-a28d-f5aa7f84edd6
+
+3. Teamup with channel option
+
+https://github.com/user-attachments/assets/12111bc0-96ef-44ab-a9cb-7f5f64b19ee2
 
 ### `/winner` Demo
 
-![winner](description_resources/winner.mp4)
+https://github.com/user-attachments/assets/e147845c-fb27-44ee-a68b-a895ab1a4c40
 
----
-
-## Installation
+## ⚙️ Installation
 
 1. **Clone the repository:**
 
-   ```bash
-   git clone <repo-url>
-   cd Discord-Bot
-   ```
+    ```bash
+    git clone <repo-url>
+    cd Discord-Bot
+    ```
 
 2. **Create a `Secrets.toml` file** with the following format:
 
-   ```toml
-   DISCORD_TOKEN = "your-bot-token-here"
-   GUILD_ID = "your-discord-guild-id"
-   ```
+    ```toml
+    DISCORD_TOKEN = "your-bot-token-here"
+    GUILD_ID = "your-discord-guild-id"
+    ```
 
 3. **Build and run the project:**
 
-   Using Shuttle:
-   ```bash
-   cargo shuttle run --release
-   ```
+    Using Shuttle:
+    ```bash
+    cargo shuttle run --release
+    ```
 
-   Or using Docker:
-   ```bash
-   docker build -t drawmaster .
-   docker run -d --name drawmaster drawmaster
-   ```
+    Or using Docker:
+    ```bash
+    docker build -t drawmaster .
+    docker run -d --name drawmaster drawmaster
+    ```
 
----
-
-## Dependencies
+## 📦 Dependencies
 
 Dependencies are managed via `Cargo.toml` and locked in `Cargo.lock`.
 
----
-
-## License
+## 📄 License
 
 This project uses the MIT license.
 
----
+## 👥 Authors
 
-## Authors
+- [WSm-77](https://github.com/WSm-77)
+- [NCCMNT](https://github.com/NCCMNT)
 
-- WSm-77
-- NCCMNT
-
----
-
-## Target Audience
+## 🎯 Target Audience
 
 - Gamers using Discord voice channels.
 
