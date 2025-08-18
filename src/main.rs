@@ -9,8 +9,7 @@ use crate::commands::{
     greeting::greeting,
     winner::winner,
     list_channel_members::list_channel_members,
-    teamup::teamup,
-    test::test
+    teamup::teamup
 };
 
 
@@ -34,11 +33,15 @@ async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleS
                 greeting(),
                 winner(),
                 teamup(),
-                test(),
             ],
             ..Default::default()
         })
-        .setup(|_ctx, _ready, _framework| Box::pin(async move { Ok(Data {}) }))
+        .setup(|ctx, _ready, framework| {
+            Box::pin(async move {
+                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                Ok(Data {})
+            })
+        })
         .build();
 
     let intents = GatewayIntents::non_privileged()
