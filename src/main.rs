@@ -2,7 +2,6 @@ mod commands;
 
 use anyhow::Context as _;
 use poise::serenity_prelude::{ClientBuilder, GatewayIntents};
-use serenity::all::GuildId;
 use shuttle_runtime::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 
@@ -27,30 +26,19 @@ async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleS
     .get("DISCORD_TOKEN")
     .context("'DISCORD_TOKEN' was not found")?;
 
-    // Get server id set in `Secrets.toml`
-    let guild_id: GuildId = secret_store
-        .get("GUILD_ID")
-        .context("'GUILD_ID' was not found")?
-        .parse()
-        .context("Couldn't parse 'GUILD_ID' string into GuildId object")?;
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![
-                    list_channel_members(),
-                    greeting(),
-                    winner(),
-                    teamup(),
-                    test(),
-                ],
+                list_channel_members(),
+                greeting(),
+                winner(),
+                teamup(),
+                test(),
+            ],
             ..Default::default()
         })
-        .setup(move |ctx, _ready, framework| {
-            Box::pin(async move {
-                poise::builtins::register_in_guild(ctx, &framework.options().commands, guild_id).await?;
-                Ok(Data {})
-            })
-        })
+        .setup(|_ctx, _ready, _framework| Box::pin(async move { Ok(Data {}) }))
         .build();
 
     let intents = GatewayIntents::non_privileged()
