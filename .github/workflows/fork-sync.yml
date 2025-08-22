@@ -1,19 +1,19 @@
-name: Sync Fork
+name: Sync Upstream
 
 on:
   schedule:
-    # every day at midnight
-    - cron: '0 0 * * *'
-  workflow_dispatch: # on button click
+    - cron: '0 18 * * *'
+  # Allows manual workflow run (must in default branch to work)
+  workflow_dispatch:
 
 jobs:
-  sync:
-
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: tgymnich/fork-sync@v1.8
+      - name: GitHub Sync to Upstream Repository
+        uses: dabreadman/sync-upstream-repo@v1.3.0
         with:
-          owner: NCCMNT
-          base: main
-          head: main
+          upstream_repo: https://github.com/NCCMNT/Discord-Bot.git
+          upstream_branch: main
+          downstream_branch: main
+          token: ${{ env.GITHUB_TOKEN }}
