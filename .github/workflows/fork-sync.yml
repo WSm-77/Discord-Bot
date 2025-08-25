@@ -16,4 +16,4 @@ jobs:
           upstream_repo: https://github.com/NCCMNT/Discord-Bot.git
           upstream_branch: main
           downstream_branch: main
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
