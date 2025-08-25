@@ -2,7 +2,6 @@ mod commands;
 
 use anyhow::Context as _;
 use poise::serenity_prelude::{ClientBuilder, GatewayIntents};
-use serenity::all::GuildId;
 use shuttle_runtime::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 
@@ -10,8 +9,7 @@ use crate::commands::{
     greeting::greeting,
     winner::winner,
     list_channel_members::list_channel_members,
-    teamup::teamup,
-    test::test
+    teamup::teamup
 };
 
 
@@ -27,27 +25,20 @@ async fn main(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleS
     .get("DISCORD_TOKEN")
     .context("'DISCORD_TOKEN' was not found")?;
 
-    // Get server id set in `Secrets.toml`
-    let guild_id: GuildId = secret_store
-        .get("GUILD_ID")
-        .context("'GUILD_ID' was not found")?
-        .parse()
-        .context("Couldn't parse 'GUILD_ID' string into GuildId object")?;
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![
-                    list_channel_members(),
-                    greeting(),
-                    winner(),
-                    teamup(),
-                    test(),
-                ],
+                list_channel_members(),
+                greeting(),
+                winner(),
+                teamup(),
+            ],
             ..Default::default()
         })
-        .setup(move |ctx, _ready, framework| {
+        .setup(|ctx, _ready, framework| {
             Box::pin(async move {
-                poise::builtins::register_in_guild(ctx, &framework.options().commands, guild_id).await?;
+                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {})
             })
         })
